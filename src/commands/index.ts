@@ -151,6 +151,7 @@ export const indexCommand = new Command("index")
 
           const result = await indexChunks(
             chunks,
+            file,
             fileName,
             options.namespace,
             progressCallback

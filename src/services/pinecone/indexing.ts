@@ -14,6 +14,19 @@ import {
 } from "./embeddings.js";
 
 /**
+ * Generate a unique document ID from a file path
+ */
+function generateDocumentId(path: string): string {
+  let hash = 0;
+  for (let i = 0; i < path.length; i++) {
+    const char = path.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+/**
  * Upsert records to the dense index
  */
 export async function upsertToDenseIndex(
@@ -84,9 +97,16 @@ export async function upsertToSparseIndex(
 /**
  * Create records from chunks for both dense and sparse indexes.
  * Both indexes will have records with the same IDs for easy merging during search.
+ *
+ * @param chunks - The document chunks to index
+ * @param sourcePath - Full file path (used for unique document_id)
+ * @param sourceFile - Display name for the source (typically basename)
+ * @param denseEmbeddings - Dense embeddings for each chunk
+ * @param sparseEmbeddings - Sparse embeddings for each chunk
  */
 export function createRecordsFromChunks(
   chunks: Chunk[],
+  sourcePath: string,
   sourceFile: string,
   denseEmbeddings: DenseEmbedding[],
   sparseEmbeddings: SparseEmbedding[]
@@ -101,20 +121,15 @@ export function createRecordsFromChunks(
   const denseRecords: DenseRecord[] = [];
   const sparseRecords: SparseRecord[] = [];
 
-  // Create a simple hash of the filename for ID prefix
-  let hash = 0;
-  for (let i = 0; i < sourceFile.length; i++) {
-    const char = sourceFile.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
-  const fileHash = Math.abs(hash).toString(36);
+  // Generate unique document ID from full path
+  const documentId = generateDocumentId(sourcePath);
 
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    const id = `${fileHash}-${i.toString().padStart(4, "0")}`;
+    const id = `${documentId}-${i.toString().padStart(4, "0")}`;
 
     const metadata: ChunkMetadata = {
+      document_id: documentId,
       source: sourceFile,
       chunk_index: i,
       chunk_text: chunk.text.slice(0, 40000), // Pinecone metadata limit
@@ -145,9 +160,16 @@ export function createRecordsFromChunks(
 /**
  * Index chunks to both dense and sparse Pinecone indexes.
  * Note: Sparse count may be less than dense count if some chunks produce empty sparse embeddings.
+ *
+ * @param chunks - The document chunks to index
+ * @param sourcePath - Full file path (used for unique document_id)
+ * @param sourceFile - Display name for the source (typically basename)
+ * @param namespace - Optional Pinecone namespace
+ * @param onProgress - Optional progress callback
  */
 export async function indexChunks(
   chunks: Chunk[],
+  sourcePath: string,
   sourceFile: string,
   namespace?: string,
   onProgress?: (stage: string, progress: number) => void
@@ -170,6 +192,7 @@ export async function indexChunks(
   // Create records
   const { denseRecords, sparseRecords } = createRecordsFromChunks(
     chunks,
+    sourcePath,
     sourceFile,
     denseEmbeddings,
     sparseEmbeddings

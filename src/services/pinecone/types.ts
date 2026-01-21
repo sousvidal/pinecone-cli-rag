@@ -42,6 +42,7 @@ export interface SparseRecord {
  * Metadata structure for indexed chunks
  */
 export interface ChunkMetadata {
+  document_id: string; // Hash of full file path for unique identification
   source: string;
   chunk_index: number;
   chunk_text: string;

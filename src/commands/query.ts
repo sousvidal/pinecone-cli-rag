@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { hybridSearch, type SearchResult } from "../services/pinecone.js";
+import { hybridSearch } from "../services/pinecone.js";
 import {
   rewriteQuery,
   streamChatCompletion,
@@ -8,6 +8,13 @@ import {
   type ChatMessage,
   type ChatCompletionResult,
 } from "../services/openai.js";
+import {
+  filterByScore,
+  extractCitedIndices,
+  groupSourcesByDocument,
+  formatSourceCitations,
+  buildContextChunks,
+} from "../utils/sources.js";
 
 interface QueryOptions {
   topK: string;
@@ -18,43 +25,6 @@ interface QueryOptions {
   rewrite?: boolean;
   stream?: boolean;
   verbose?: boolean;
-}
-
-/**
- * Filter results by minimum score threshold
- */
-function filterByScore(
-  results: SearchResult[],
-  minScore: number
-): SearchResult[] {
-  return results.filter((r) => r.score >= minScore);
-}
-
-/**
- * Format source citations for display
- */
-function formatSourceCitations(results: SearchResult[]): string {
-  const lines = results.map((r, i) => {
-    const headings =
-      r.metadata.headings && r.metadata.headings.length > 0
-        ? ` > ${r.metadata.headings.join(" > ")}`
-        : "";
-    return `  [${i + 1}] ${r.metadata.source}${headings} (score: ${r.score.toFixed(2)})`;
-  });
-  return lines.join("\n");
-}
-
-/**
- * Build context chunks from search results
- */
-function buildContextChunks(
-  results: SearchResult[]
-): Array<{ source: string; headings: string[]; text: string }> {
-  return results.map((r) => ({
-    source: r.metadata.source,
-    headings: r.metadata.headings || [],
-    text: r.metadata.chunk_text,
-  }));
 }
 
 export const queryCommand = new Command("query")
@@ -206,10 +176,14 @@ export const queryCommand = new Command("query")
 
       console.log("─".repeat(60));
 
-      // Step 6: Show source citations
+      // Step 6: Show source citations (only for indices actually cited in the response)
       if (relevantResults.length > 0) {
-        console.log("\n📚 Sources:");
-        console.log(formatSourceCitations(relevantResults));
+        const citedIndices = extractCitedIndices(result.content);
+        const groupedSources = groupSourcesByDocument(relevantResults, citedIndices);
+        if (groupedSources.length > 0) {
+          console.log("\n📚 Sources:");
+          console.log(formatSourceCitations(groupedSources));
+        }
       }
 
       // Show token usage in verbose mode
