@@ -1,0 +1,49 @@
+# Cursor AI Assistant Rules
+
+## Core Principles
+- **NEVER** create documentation unless explicitly requested
+- **NEVER** write tests or test endpoints unless explicitly requested
+- **NEVER** create git commits automatically
+- **NEVER** use Docker unless specifically prompted
+- Keep responses concise - minimize or omit summaries at task completion 
+
+## Development Workflow
+
+### When building a UI
+- **ALWAYS** use Shadcn and / or Tailwind
+- **ALWAYS** look for similar pages or components and re-use them and/or their style
+
+### Before/After Making Changes
+1. Check existing packages before installing new ones - prefer reusing installed dependencies
+2. Check if there are existing components you can re-use
+3. Run `npm run build` to identify specific build errors before attempting fixes
+4. Run `npm run lint` to identify specific linting errors before attempting fixes
+5. Run `npx prisma migrate` after you've made changes to the database schema
+6. After running `npx prisma migrate` you **ALWAYS** run `npx prisma generate`
+7. After creating a new *route* don't forget to register it
+
+### TypeScript Guidelines
+- **NEVER** use type `any` - use `unknown`, specific types, or generics instead
+- Use template literals (`${variable}`) instead of string concatenation with `+=`
+- Prefer interfaces over type aliases for object shapes
+- Enable strict mode compliance
+
+### Git Workflow (when requested)
+- Review previous commits to match the existing commit message style
+- Always review the diff before suggesting commit messages
+- Follow conventional commit format if established in the repository
+- If there are multiple (unrelated) features in one commit, consider splitting it up into several commits
+
+### Code Quality
+- Review all code changes at task completion for:
+  - Type safety and proper TypeScript usage
+  - Consistent code style with existing codebase
+  - Removal of unused imports and variables
+  - Proper error handling
+
+## Context Information
+- Current year: 2025
+- Target environment: Modern JavaScript/TypeScript runtime
+
+## Override Clause
+These rules are **MANDATORY** unless the user explicitly requests an exception. When an exception is requested, acknowledge the override before proceeding.
